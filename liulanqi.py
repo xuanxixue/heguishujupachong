@@ -1,36 +1,38 @@
 import sys
 import os
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+import json
+import urllib.robotparser
+from urllib.parse import urlparse, urljoin
+from datetime import datetime
 import time
 import re
-import json
 import logging
 from threading import Thread
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtGui import *
+from PyQt5.QtCore import QUrl, Qt, QTimer, pyqtSignal, QSize, QStandardPaths
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
+    QWidget, QPushButton, QLineEdit, QToolBar, QLabel,
+    QTabWidget, QStatusBar, QAction, QFileDialog, QMessageBox,
+    QSizePolicy, QListWidget, QListWidgetItem, QTextEdit, QSplitter,
+    QGroupBox, QProgressBar, QMenu, QDialog, QDialogButtonBox,
+    QListWidget, QTreeWidget, QTreeWidgetItem, QHeaderView, QCheckBox
+)
+from PyQt5.QtGui import QFont, QIcon, QPixmap, QPalette, QColor
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineDownloadItem, QWebEngineSettings
+import requests
+from bs4 import BeautifulSoup
 
-# 必须在创建QApplication之前设置高DPI
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
+# 尝试导入高级依赖（非强制）
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
     from webdriver_manager.chrome import ChromeDriverManager
     from selenium.webdriver.chrome.service import Service
-    from googletrans import Translator
     SELENIUM_AVAILABLE = True
-except ImportError as e:
-    print(f"某些依赖未正确安装: {e}")
+except ImportError:
     SELENIUM_AVAILABLE = False
 
 try:
@@ -40,58 +42,432 @@ try:
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
-    print("DOCX导出功能不可用，请安装python-docx: pip install python-docx")
 
-class CrawlerThread(Thread):
-    """爬虫线程，用于在后台执行爬取任务"""
-    
-    def __init__(self, crawler, url):
-        super().__init__()
-        self.crawler = crawler
-        self.url = url
-        self.running = True
-    
-    def run(self):
-        """运行爬虫"""
-        self.crawler.crawl_single_page(self.url)
 
-class DocumentCrawler:
-    """文档爬虫类"""
+class CustomWebEnginePage(QWebEnginePage):
+    """自定义网页引擎页面，处理导航请求和新窗口请求"""
+    
+    def __init__(self, parent=None, main_window=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        self.navigation_attempts = {}
+
+    def acceptNavigationRequest(self, url, navigation_type, isMainFrame):
+        """处理导航请求，允许所有类型的导航"""
+        # 记录导航尝试
+        url_str = url.toString()
+        self.navigation_attempts[url_str] = self.navigation_attempts.get(url_str, 0) + 1
+        
+        # 允许所有导航请求
+        print(f"导航请求: {url_str}, 类型: {navigation_type}, 主框架: {isMainFrame}")
+        return True
+
+    def createWindow(self, type):
+        """创建新窗口/新标签页 - 这是关键函数，处理新窗口请求"""
+        print(f"创建新窗口请求: {type}")
+        
+        if self.main_window:
+            # 在主窗口中创建新标签页
+            new_browser = self.main_window.add_new_tab(QUrl("about:blank"), "新标签页")
+            return new_browser.page()
+        
+        # 如果没有主窗口引用，创建一个新的浏览器窗口
+        new_browser = QWebEngineView()
+        new_page = CustomWebEnginePage(new_browser)
+        new_browser.setPage(new_page)
+        return new_page
+
+
+class DownloadManager(QDialog):
+    """下载管理器"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("下载管理器")
+        self.setGeometry(300, 300, 800, 500)
+        self.setup_ui()
+        self.downloads = []
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # 工具栏
+        toolbar = QHBoxLayout()
+        self.clear_btn = QPushButton("清空已完成")
+        self.open_folder_btn = QPushButton("打开下载文件夹")
+        self.pause_all_btn = QPushButton("暂停全部")
+        self.resume_all_btn = QPushButton("继续全部")
+
+        self.clear_btn.clicked.connect(self.clear_completed)
+        self.open_folder_btn.clicked.connect(self.open_download_folder)
+        self.pause_all_btn.clicked.connect(self.pause_all)
+        self.resume_all_btn.clicked.connect(self.resume_all)
+
+        toolbar.addWidget(self.clear_btn)
+        toolbar.addWidget(self.open_folder_btn)
+        toolbar.addWidget(self.pause_all_btn)
+        toolbar.addWidget(self.resume_all_btn)
+        toolbar.addStretch()
+
+        # 下载列表
+        self.download_list = QTreeWidget()
+        self.download_list.setHeaderLabels(["文件名", "进度", "状态", "大小", "速度", "剩余时间"])
+        self.download_list.header().setSectionResizeMode(0, QHeaderView.Stretch)
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.download_list)
+
+    def add_download(self, download_item):
+        """添加新的下载项"""
+        item = QTreeWidgetItem(self.download_list)
+        item.download = download_item
+        self.downloads.append(item)
+        
+        filename = os.path.basename(download_item.path())
+        item.setText(0, filename)
+        item.setText(1, "0%")
+        item.setText(2, "下载中")
+        item.setText(3, "未知")
+        item.setText(4, "0 KB/s")
+        item.setText(5, "未知")
+        
+        # 连接信号
+        download_item.downloadProgress.connect(lambda bytes_received, bytes_total: 
+                                             self.update_progress(item, bytes_received, bytes_total))
+        download_item.finished.connect(lambda: self.download_finished(item))
+        
+        self.download_list.addTopLevelItem(item)
+
+    def update_progress(self, item, bytes_received, bytes_total):
+        """更新下载进度"""
+        if bytes_total > 0:
+            percent = int((bytes_received / bytes_total) * 100)
+            item.setText(1, f"{percent}%")
+            
+            # 计算下载速度（简化版）
+            speed = "计算中..."
+            time_left = "计算中..."
+            
+            item.setText(2, "下载中")
+            item.setText(3, f"{bytes_received//1024}KB / {bytes_total//1024}KB")
+            item.setText(4, speed)
+            item.setText(5, time_left)
+
+    def download_finished(self, item):
+        """下载完成"""
+        if item.download.state() == QWebEngineDownloadItem.DownloadCompleted:
+            item.setText(1, "100%")
+            item.setText(2, "已完成")
+            item.setText(4, "")
+            item.setText(5, "")
+        else:
+            item.setText(2, "失败")
+
+    def clear_completed(self):
+        """清除已完成的下载"""
+        for i in range(self.download_list.topLevelItemCount() - 1, -1, -1):
+            item = self.download_list.topLevelItem(i)
+            if item.text(2) in ["已完成", "失败"]:
+                self.download_list.takeTopLevelItem(i)
+
+    def open_download_folder(self):
+        """打开下载文件夹"""
+        download_path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
+        if os.path.exists(download_path):
+            if os.name == 'nt':  # Windows
+                os.startfile(download_path)
+            elif os.name == 'posix':  # Linux or macOS
+                if sys.platform == 'darwin':  # macOS
+                    os.system(f'open "{download_path}"')
+                else:  # Linux
+                    os.system(f'xdg-open "{download_path}"')
+
+    def pause_all(self):
+        """暂停所有下载"""
+        for item in self.downloads:
+            if hasattr(item, 'download') and item.download.state() == QWebEngineDownloadItem.DownloadInProgress:
+                item.download.pause()
+                item.setText(2, "已暂停")
+
+    def resume_all(self):
+        """继续所有下载"""
+        for item in self.downloads:
+            if hasattr(item, 'download') and item.download.state() == QWebEngineDownloadItem.DownloadPaused:
+                item.download.resume()
+                item.setText(2, "下载中")
+
+
+class HistoryManager(QDialog):
+    """历史记录管理器"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("浏览历史")
+        self.setGeometry(300, 300, 800, 500)
+        self.setup_ui()
+        self.history = []
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # 工具栏
+        toolbar = QHBoxLayout()
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("搜索历史记录...")
+        self.search_box.textChanged.connect(self.filter_history)
+        
+        self.clear_btn = QPushButton("清空历史")
+        self.clear_btn.clicked.connect(self.clear_history)
+
+        toolbar.addWidget(QLabel("搜索:"))
+        toolbar.addWidget(self.search_box)
+        toolbar.addStretch()
+        toolbar.addWidget(self.clear_btn)
+
+        # 历史列表
+        self.history_list = QTreeWidget()
+        self.history_list.setHeaderLabels(["标题", "网址", "访问时间"])
+        self.history_list.header().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.history_list.itemDoubleClicked.connect(self.open_history_item)
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.history_list)
+
+    def add_history(self, title, url):
+        """添加历史记录"""
+        self.history.append({
+            "title": title,
+            "url": url,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        self.refresh_list()
+
+    def filter_history(self, text):
+        """过滤历史记录"""
+        for i in range(self.history_list.topLevelItemCount()):
+            item = self.history_list.topLevelItem(i)
+            match = (text.lower() in item.text(0).lower() or 
+                    text.lower() in item.text(1).lower())
+            item.setHidden(not match)
+
+    def refresh_list(self):
+        """刷新列表"""
+        self.history_list.clear()
+        for record in self.history:
+            item = QTreeWidgetItem(self.history_list)
+            item.setText(0, record["title"])
+            item.setText(1, record["url"])
+            item.setText(2, record["time"])
+            self.history_list.addTopLevelItem(item)
+
+    def open_history_item(self, item, column):
+        """打开历史记录项"""
+        url = item.text(1)
+        if self.parent():
+            self.parent().add_new_tab(QUrl(url))
+
+    def clear_history(self):
+        """清空历史记录"""
+        if QMessageBox.question(self, "确认", "清空所有历史记录？") == QMessageBox.Yes:
+            self.history.clear()
+            self.history_list.clear()
+
+
+class BookmarksManager(QDialog):
+    """书签管理器"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("书签管理器")
+        self.setGeometry(300, 300, 800, 500)
+        self.setup_ui()
+        self.bookmarks = []
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # 工具栏
+        toolbar = QHBoxLayout()
+        self.add_btn = QPushButton("添加书签")
+        self.delete_btn = QPushButton("删除书签")
+        self.import_btn = QPushButton("导入")
+        self.export_btn = QPushButton("导出")
+
+        self.add_btn.clicked.connect(self.add_bookmark)
+        self.delete_btn.clicked.connect(self.delete_bookmark)
+        self.import_btn.clicked.connect(self.import_bookmarks)
+        self.export_btn.clicked.connect(self.export_bookmarks)
+
+        toolbar.addWidget(self.add_btn)
+        toolbar.addWidget(self.delete_btn)
+        toolbar.addWidget(self.import_btn)
+        toolbar.addWidget(self.export_btn)
+        toolbar.addStretch()
+
+        # 书签列表
+        self.bookmarks_list = QTreeWidget()
+        self.bookmarks_list.setHeaderLabels(["标题", "网址", "添加时间"])
+        self.bookmarks_list.header().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.bookmarks_list.itemDoubleClicked.connect(self.open_bookmark)
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.bookmarks_list)
+
+    def add_bookmark(self, title="", url=""):
+        """添加书签"""
+        if not title or not url:
+            # 从父窗口获取当前页面信息
+            if self.parent():
+                browser = self.parent().tab_widget.currentWidget()
+                if isinstance(browser, QWebEngineView):
+                    title = browser.title()
+                    url = browser.url().toString()
+        
+        if title and url:
+            self.bookmarks.append({
+                "title": title,
+                "url": url,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
+            self.refresh_list()
+
+    def delete_bookmark(self):
+        """删除书签"""
+        current_item = self.bookmarks_list.currentItem()
+        if current_item:
+            index = self.bookmarks_list.indexOfTopLevelItem(current_item)
+            if index >= 0:
+                self.bookmarks.pop(index)
+                self.refresh_list()
+
+    def open_bookmark(self, item, column):
+        """打开书签"""
+        url = item.text(1)
+        if self.parent():
+            self.parent().add_new_tab(QUrl(url))
+
+    def import_bookmarks(self):
+        """导入书签"""
+        path, _ = QFileDialog.getOpenFileName(self, "导入书签", "", "JSON文件 (*.json)")
+        if path:
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    self.bookmarks = json.load(f)
+                self.refresh_list()
+                QMessageBox.information(self, "成功", "书签导入成功")
+            except Exception as e:
+                QMessageBox.critical(self, "失败", f"导入失败: {e}")
+
+    def export_bookmarks(self):
+        """导出书签"""
+        path, _ = QFileDialog.getSaveFileName(self, "导出书签", "", "JSON文件 (*.json)")
+        if path:
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    json.dump(self.bookmarks, f, ensure_ascii=False, indent=2)
+                QMessageBox.information(self, "成功", "书签导出成功")
+            except Exception as e:
+                QMessageBox.critical(self, "失败", f"导出失败: {e}")
+
+    def refresh_list(self):
+        """刷新列表"""
+        self.bookmarks_list.clear()
+        for bookmark in self.bookmarks:
+            item = QTreeWidgetItem(self.bookmarks_list)
+            item.setText(0, bookmark["title"])
+            item.setText(1, bookmark["url"])
+            item.setText(2, bookmark["time"])
+            self.bookmarks_list.addTopLevelItem(item)
+
+
+class SettingsDialog(QDialog):
+    """设置对话框"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("浏览器设置")
+        self.setGeometry(400, 400, 600, 400)
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # 下载设置
+        download_group = QGroupBox("下载设置")
+        download_layout = QVBoxLayout()
+        
+        self.download_path_edit = QLineEdit()
+        self.download_path_edit.setText(QStandardPaths.writableLocation(QStandardPaths.DownloadLocation))
+        self.browse_btn = QPushButton("浏览...")
+        self.browse_btn.clicked.connect(self.browse_download_path)
+        
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("下载路径:"))
+        path_layout.addWidget(self.download_path_edit)
+        path_layout.addWidget(self.browse_btn)
+        
+        self.ask_save_check = QCheckBox("每次下载前询问保存位置")
+        self.ask_save_check.setChecked(True)
+        
+        download_layout.addLayout(path_layout)
+        download_layout.addWidget(self.ask_save_check)
+        download_group.setLayout(download_layout)
+
+        # 隐私设置
+        privacy_group = QGroupBox("隐私设置")
+        privacy_layout = QVBoxLayout()
+        
+        self.clear_on_exit = QCheckBox("退出时清除浏览数据")
+        self.block_images = QCheckBox("阻止图片加载（加速浏览）")
+        self.javascript_enabled = QCheckBox("启用JavaScript")
+        self.javascript_enabled.setChecked(True)
+        
+        privacy_layout.addWidget(self.clear_on_exit)
+        privacy_layout.addWidget(self.block_images)
+        privacy_layout.addWidget(self.javascript_enabled)
+        privacy_group.setLayout(privacy_layout)
+
+        # 按钮
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+
+        layout.addWidget(download_group)
+        layout.addWidget(privacy_group)
+        layout.addStretch()
+        layout.addWidget(button_box)
+
+    def browse_download_path(self):
+        """选择下载路径"""
+        path = QFileDialog.getExistingDirectory(self, "选择下载文件夹", self.download_path_edit.text())
+        if path:
+            self.download_path_edit.setText(path)
+
+
+class CrawlerWorker:
+    """增强版爬虫引擎，支持动态渲染和静态解析"""
     
     def __init__(self, output_dir="crawled_data"):
         self.output_dir = output_dir
         self.crawled_data = []
-        self.is_crawling = False
-        self.current_task = None
-        
-        # 创建输出目录
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # 设置日志
+        self.driver = None
+        self.setup_logging()
+        if SELENIUM_AVAILABLE:
+            self.setup_selenium()
+
+    def setup_logging(self):
+        os.makedirs(self.output_dir, exist_ok=True)
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler(os.path.join(output_dir, 'crawler.log')),
+                logging.FileHandler(os.path.join(self.output_dir, 'crawler.log')),
                 logging.StreamHandler()
             ]
         )
         self.logger = logging.getLogger(__name__)
-        
-        # 初始化翻译器
-        try:
-            self.translator = Translator()
-        except:
-            self.translator = None
-            self.logger.warning("翻译器初始化失败")
-        
-        # 初始化Selenium驱动
-        self.driver = None
-        if SELENIUM_AVAILABLE:
-            self.setup_selenium()
-    
+
     def setup_selenium(self):
-        """设置Selenium WebDriver"""
         try:
             chrome_options = Options()
             chrome_options.add_argument("--headless")
@@ -99,1040 +475,788 @@ class DocumentCrawler:
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--window-size=1920,1080")
-            chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-            
-            # 尝试自动找到Chrome浏览器
+            chrome_options.add_argument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            )
+
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            self.logger.info("Selenium WebDriver初始化成功")
+            self.logger.info("Selenium 初始化成功")
         except Exception as e:
-            self.logger.warning(f"Selenium WebDriver初始化失败: {e}")
-            # 尝试使用系统Chrome
-            try:
-                chrome_options.binary_location = self.find_chrome_path()
-                service = Service(ChromeDriverManager().install())
-                self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                self.logger.info("使用系统Chrome路径初始化成功")
-            except Exception as e2:
-                self.logger.warning(f"使用系统Chrome路径也失败: {e2}")
-                self.driver = None
-    
-    def find_chrome_path(self):
-        """查找系统Chrome安装路径"""
-        possible_paths = [
-            "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-            "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-            os.path.expanduser("~\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe")
-        ]
-        
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-        return None
-    
+            self.logger.warning(f"Selenium 初始化失败: {e}")
+            self.driver = None
+
     def is_valid_url(self, url):
-        """检查URL是否有效"""
         try:
             parsed = urlparse(url)
-            return (parsed.netloc and 
-                    parsed.scheme in ['http', 'https'] and
-                    not any(ext in url.lower() for ext in ['.pdf', '.jpg', '.png', '.gif', '.zip', '.exe']))
+            return bool(parsed.netloc and parsed.scheme in ['http', 'https'])
         except:
             return False
-    
-    def can_crawl(self, url):
-        """检查是否可以爬取该URL"""
-        if not self.is_valid_url(url):
-            return False, "URL格式无效"
-        
-        # 检查robots.txt
+
+    def can_fetch(self, url, user_agent="*"):
         try:
-            robots_url = urljoin(url, '/robots.txt')
-            response = requests.get(robots_url, timeout=5)
-            if response.status_code == 200:
-                # 简单的robots.txt检查
-                if 'Disallow: /' in response.text:
-                    return False, "robots.txt禁止爬取"
-        except:
-            pass  # 如果无法获取robots.txt，我们仍然尝试爬取
-        
-        return True, "可以爬取"
-    
+            parsed = urlparse(url)
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            robots_url = f"{base_url}/robots.txt"
+
+            rp = urllib.robotparser.RobotFileParser()
+            rp.set_url(robots_url)
+            rp.read()
+            return rp.can_fetch(user_agent, url)
+        except Exception as e:
+            self.logger.warning(f"无法检查 robots.txt: {e}")
+            return True  # 宽松策略
+
     def clean_text(self, text):
-        """清理和预处理文本"""
         if not text:
             return ""
-        # 移除多余的空格和换行
         text = re.sub(r'\s+', ' ', text)
-        # 移除特殊字符但保留基本标点
-        text = re.sub(r'[^\w\s\.\,\!\?\-\(\)\:\;]', '', text)
-        # 移除网址
-        text = re.sub(r'http\S+', '', text)
+        text = re.sub(r'http\S+', '', text)  # 移除 URL
         return text.strip()
-    
-    def extract_text_content(self, soup):
-        """从BeautifulSoup对象中提取文本内容"""
-        # 移除脚本和样式标签
-        for script in soup(["script", "style"]):
-            script.decompose()
-        
-        # 提取主要文本内容
-        text_parts = []
-        
-        # 优先提取标题
-        for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            text_parts.append(heading.get_text().strip())
-        
-        # 提取段落文本
-        for paragraph in soup.find_all('p'):
-            text = paragraph.get_text().strip()
-            if len(text) > 20:  # 只保留较长的段落
-                text_parts.append(text)
-        
-        # 提取列表项
-        for list_item in soup.find_all('li'):
-            text = list_item.get_text().strip()
-            if len(text) > 10:
-                text_parts.append(text)
-        
-        # 合并所有文本
-        full_text = ' '.join(text_parts)
-        return self.clean_text(full_text)
-    
+
+    def extract_page_data(self, soup, current_url):
+        # 移除无关标签
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else "无标题"
+
+        # 提取正文
+        paragraphs = []
+        for p in soup.find_all(['p', 'h1', 'h2', 'h3', 'li']):
+            txt = p.get_text().strip()
+            if len(txt) > 20:
+                paragraphs.append(txt)
+
+        full_text = '\n'.join(paragraphs)
+        clean_text = self.clean_text(full_text)
+
+        links = [urljoin(current_url, a.get('href')) for a in soup.find_all('a', href=True)]
+        internal_links = [link for link in links if urlparse(link).netloc == urlparse(current_url).netloc]
+        external_links = [link for link in links if link not in internal_links]
+
+        return {
+            "title": title_text,
+            "url": current_url,
+            "timestamp": datetime.now().isoformat(),
+            "content_preview": clean_text[:1000] + "..." if len(clean_text) > 1000 else clean_text,
+            "full_content": clean_text,
+            "word_count": len(clean_text.split()),
+            "char_count": len(clean_text),
+            "total_links": len(links),
+            "internal_links": len(internal_links),
+            "external_links": len(external_links),
+            "top_links": links[:50],
+            "images": [img.get('src') for img in soup.find_all('img', src=True)][:20],
+            "meta_description": "",
+        }
+
     def crawl_with_requests(self, url):
-        """使用requests库爬取页面"""
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
-            
-            # 检测编码
-            if response.encoding.lower() != 'utf-8':
+            if response.encoding != 'utf-8':
                 response.encoding = 'utf-8'
-            
-            soup = BeautifulSoup(response.content, 'lxml')
+            soup = BeautifulSoup(response.content, 'html.parser')
             return soup, True
         except Exception as e:
-            self.logger.warning(f"使用requests爬取 {url} 失败: {e}")
+            self.logger.warning(f"Requests 失败: {e}")
             return None, False
-    
+
     def crawl_with_selenium(self, url):
-        """使用Selenium爬取JavaScript渲染的页面"""
         if not self.driver:
             return None, False
-        
         try:
             self.driver.get(url)
-            # 等待页面加载
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            
-            # 获取页面源码
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             page_source = self.driver.page_source
-            soup = BeautifulSoup(page_source, 'lxml')
+            soup = BeautifulSoup(page_source, 'html.parser')
             return soup, True
         except Exception as e:
-            self.logger.warning(f"使用Selenium爬取 {url} 失败: {e}")
+            self.logger.warning(f"Selenium 失败: {e}")
             return None, False
-    
+
     def crawl_single_page(self, url):
-        """爬取单个页面"""
-        self.is_crawling = True
-        self.logger.info(f"正在爬取: {url}")
-        
-        # 首先尝试使用requests（更快）
+        if not self.is_valid_url(url):
+            return False, "无效的URL"
+
+        success, msg = False, "未知错误"
         soup, success = self.crawl_with_requests(url)
-        
-        # 如果失败，尝试使用Selenium
-        if not success and self.driver:
+        if not success and SELENIUM_AVAILABLE:
             soup, success = self.crawl_with_selenium(url)
-        
-        if not success:
-            self.is_crawling = False
-            return False, "爬取失败"
-        
-        # 提取文本内容
-        text_content = self.extract_text_content(soup)
-        
-        if not text_content or len(text_content) < 100:
-            self.is_crawling = False
-            return False, "页面内容过少或无文本内容"
-        
-        # 保存数据
-        title = url.split('/')[-1] or "无标题"
-        if len(text_content) > 50:
-            title = text_content[:50] + "..."
-        
-        data_item = {
-            'url': url,
-            'title': title,
-            'content': text_content,
-            'length': len(text_content),
-            'crawl_time': time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        self.crawled_data.append(data_item)
-        
-        # 保存到文件
+
+        if not success or not soup:
+            return False, "页面获取失败"
+
+        data = self.extract_page_data(soup, url)
+        self.crawled_data.append(data)
         self.save_data()
-        
-        self.is_crawling = False
-        return True, f"成功爬取，获取 {len(text_content)} 个字符"
-    
-    def translate_text(self, text, dest_lang='zh-cn'):
-        """翻译文本"""
-        try:
-            if self.translator:
-                translated = self.translator.translate(text, dest=dest_lang)
-                return translated.text
-            else:
-                return "翻译功能不可用"
-        except Exception as e:
-            self.logger.error(f"翻译失败: {e}")
-            return f"翻译失败: {str(e)}"
-    
+        return True, f"成功抓取 {len(data['full_content'])} 字符"
+
     def save_data(self):
-        """保存爬取的数据"""
         try:
-            # 保存为JSON
-            json_path = os.path.join(self.output_dir, 'crawled_data.json')
-            with open(json_path, 'w', encoding='utf-8') as f:
+            # JSON 全量存储
+            with open(os.path.join(self.output_dir, 'crawled_data.json'), 'w', encoding='utf-8') as f:
                 json.dump(self.crawled_data, f, ensure_ascii=False, indent=2)
-            
-            # 保存为纯文本（用于训练AI）
-            text_path = os.path.join(self.output_dir, 'training_data.txt')
-            with open(text_path, 'w', encoding='utf-8') as f:
+
+            # TXT 训练数据格式
+            with open(os.path.join(self.output_dir, 'training_data.txt'), 'w', encoding='utf-8') as f:
                 for item in self.crawled_data:
                     f.write(f"URL: {item['url']}\n")
                     f.write(f"标题: {item['title']}\n")
-                    f.write(f"内容: {item['content']}\n")
-                    f.write("\n" + "="*80 + "\n\n")
-            
-            self.logger.info(f"数据已保存到: {self.output_dir}")
+                    f.write(f"字数: {item['word_count']} 字\n")
+                    f.write(f"内容:\n{item['full_content']}\n")
+                    f.write("\n" + "=" * 80 + "\n\n")
         except Exception as e:
-            self.logger.error(f"保存数据失败: {e}")
-    
-    def export_to_docx(self, filepath=None):
-        """导出数据为DOCX文档"""
+            self.logger.error(f"保存失败: {e}")
+
+    def export_to_docx(self, filepath):
         if not DOCX_AVAILABLE:
-            return False, "DOCX导出功能不可用，请安装python-docx库"
-        
+            return False, "DOCX库未安装"
         if not self.crawled_data:
-            return False, "没有数据可导出"
-        
+            return False, "无数据可导出"
+
         try:
-            # 如果没有指定文件路径，使用默认路径
-            if not filepath:
-                filepath = os.path.join(self.output_dir, 'crawled_data.docx')
-            
-            # 创建文档
             doc = Document()
-            
-            # 添加标题
-            title = doc.add_heading('网页数据采集报告', 0)
-            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            # 添加基本信息
-            doc.add_paragraph(f"采集时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            doc.add_paragraph(f"采集页面数量: {len(self.crawled_data)}")
-            doc.add_paragraph("")
-            
-            # 添加每个页面的内容
-            for i, data in enumerate(self.crawled_data, 1):
-                # 添加页面标题
-                doc.add_heading(f"页面 {i}: {data['title']}", level=1)
-                
-                # 添加URL
-                url_para = doc.add_paragraph("URL: ")
-                url_para.add_run(data['url']).bold = True
-                
-                # 添加采集时间
-                doc.add_paragraph(f"采集时间: {data['crawl_time']}")
-                
-                # 添加内容
-                doc.add_heading("内容", level=2)
-                content_para = doc.add_paragraph(data['content'])
-                
-                # 添加分隔线
-                if i < len(self.crawled_data):
-                    doc.add_paragraph("")
-                    doc.add_paragraph("=" * 50)
-                    doc.add_paragraph("")
-            
-            # 保存文档
+            doc.add_heading('AI数据采集报告', 0)
+
+            for i, d in enumerate(self.crawled_data, 1):
+                doc.add_heading(f"{i}. {d['title']}", level=1)
+                p = doc.add_paragraph("")
+                p.add_run(f"来源: ").bold = True
+                p.add_run(d['url'])
+                doc.add_paragraph(f"采集时间: {d['timestamp']}")
+                doc.add_heading("内容摘要", level=2)
+                doc.add_paragraph(d['full_content'])
+                doc.add_page_break()
+
             doc.save(filepath)
-            self.logger.info(f"DOCX文档已保存到: {filepath}")
-            return True, f"DOCX文档已保存到: {filepath}"
-            
+            return True, f"已导出至 {filepath}"
         except Exception as e:
-            self.logger.error(f"导出DOCX失败: {e}")
-            return False, f"导出DOCX失败: {str(e)}"
+            return False, str(e)
 
-class ModernButton(QPushButton):
-    """现代化按钮样式"""
-    def __init__(self, text, icon_name=None, parent=None):
-        super().__init__(text, parent)
-        self.setMinimumHeight(36)
-        self.setCursor(Qt.PointingHandCursor)
-        
-        # 基础样式
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #4A90E2;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: 500;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #357ABD;
-            }
-            QPushButton:pressed {
-                background-color: #2D6CA2;
-            }
-            QPushButton:disabled {
-                background-color: #B0B0B0;
-                color: #E0E0E0;
-            }
-        """)
 
-class BrowserWithCrawler(QMainWindow):
-    """现代化浏览器爬虫工具"""
-    
+class ModernBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI数据采集浏览器")
-        self.setGeometry(100, 100, 1600, 900)
+        self.setWindowTitle("道衍AI浏览器 - 智能合规爬虫版")
+        self.resize(1400, 900)
         
-        # 设置应用样式
+        # 初始化组件
+        self.crawler = CrawlerWorker()
+        self.download_manager = DownloadManager(self)
+        self.history_manager = HistoryManager(self)
+        self.bookmarks_manager = BookmarksManager(self)
+        self.settings_dialog = SettingsDialog(self)
+        
+        # 下载设置
+        self.download_path = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
+        self.ask_before_download = True
+
+        self.setup_ui()
+        self.setup_downloads()
+
+    def setup_downloads(self):
+        """设置下载处理器"""
+        profile = QWebEngineProfile.defaultProfile()
+        profile.downloadRequested.connect(self.on_download_requested)
+
+    def on_download_requested(self, download):
+        """处理下载请求"""
+        if self.ask_before_download:
+            path, _ = QFileDialog.getSaveFileName(
+                self, "保存文件", 
+                os.path.join(self.download_path, download.downloadFileName())
+            )
+            if path:
+                download.setPath(path)
+                download.accept()
+                self.download_manager.add_download(download)
+                self.download_manager.show()
+            else:
+                download.cancel()
+        else:
+            download.setPath(os.path.join(self.download_path, download.downloadFileName()))
+            download.accept()
+            self.download_manager.add_download(download)
+            self.download_manager.show()
+
+    def setup_ui(self):
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #F5F7FA;
-            }
-            QWidget {
-                background-color: #F5F7FA;
-            }
-            QLabel {
-                color: #2C3E50;
-                font-weight: 600;
-            }
+            QMainWindow { background-color: #f0f0f0; }
             QLineEdit {
-                padding: 10px 12px;
-                border: 2px solid #E1E8ED;
-                border-radius: 6px;
+                padding: 10px;
+                border: 2px solid #ccc;
+                border-radius: 20px;
+                font-size: 14px;
+            }
+            QPushButton {
                 background-color: white;
-                font-size: 13px;
-                selection-background-color: #4A90E2;
-            }
-            QLineEdit:focus {
-                border-color: #4A90E2;
-            }
-            QListWidget {
-                border: 2px solid #E1E8ED;
-                border-radius: 6px;
-                background-color: white;
-                alternate-background-color: #F8F9FA;
-                font-size: 13px;
-                outline: none;
-            }
-            QListWidget::item {
+                border: 1px solid #ddd;
                 padding: 8px 12px;
-                border-bottom: 1px solid #E1E8ED;
-            }
-            QListWidget::item:selected {
-                background-color: #E3F2FD;
-                color: #1976D2;
-                border: none;
-            }
-            QListWidget::item:hover {
-                background-color: #F5F5F5;
-            }
-            QTextEdit {
-                border: 2px solid #E1E8ED;
-                border-radius: 6px;
-                background-color: white;
-                padding: 12px;
+                border-radius: 18px;
                 font-size: 13px;
-                line-height: 1.5;
             }
-            QSplitter::handle {
-                background-color: #D1D9E0;
-                width: 4px;
-                border-radius: 2px;
-            }
-            QTabWidget::pane {
-                border: 2px solid #E1E8ED;
-                border-radius: 8px;
-                background-color: white;
-            }
+            QPushButton:hover { background-color: #f9f9f9; border-color: #aaa; }
             QTabBar::tab {
-                background-color: #F0F4F8;
-                border: 1px solid #E1E8ED;
-                border-bottom: none;
+                background-color: white;
+                color: #333;
                 padding: 8px 16px;
                 margin-right: 2px;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                font-weight: 500;
-                color: #64748B;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
             }
             QTabBar::tab:selected {
-                background-color: white;
-                color: #4A90E2;
-                border-bottom: 2px solid #4A90E2;
+                background-color: #e6f7ff;
+                font-weight: bold;
             }
-            QTabBar::tab:hover:!selected {
-                background-color: #E8F4FD;
-                color: #357ABD;
+            QToolBar {
+                background-color: white;
+                border-bottom: 1px solid #ddd;
+                spacing: 10px;
+                padding: 8px;
+            }
+            QLabel#status {
+                color: #555;
+                padding: 4px 8px;
+                background: #eee;
+                border-radius: 10px;
+            }
+            QListWidget {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: white;
+            }
+            QTextEdit {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                background: white;
             }
             QGroupBox {
-                border: 2px solid #E1E8ED;
+                border: 2px solid #ddd;
                 border-radius: 8px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
-                color: #2C3E50;
-                background-color: white;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 12px;
-                padding: 0 8px 0 8px;
-            }
-            QProgressBar {
-                border: 2px solid #E1E8ED;
-                border-radius: 6px;
-                text-align: center;
-                background-color: #F0F4F8;
-            }
-            QProgressBar::chunk {
-                background-color: #4A90E2;
-                border-radius: 4px;
+                background: white;
             }
         """)
-        
-        # 初始化爬虫
-        self.crawler = DocumentCrawler()
-        self.crawl_thread = None
-        
-        # 创建中央部件
+
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        
-        # 主布局
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(12, 12, 12, 12)
-        main_layout.setSpacing(12)
-        
-        # 创建浏览器组件 - 必须先创建
-        self.browser = QWebEngineView()
-        self.browser.setUrl(QUrl("https://www.google.com"))
-        
-        # 创建顶部工具栏
-        self.create_top_toolbar(main_layout)
-        
-        # 创建主内容区域
-        self.create_main_content(main_layout)
-        
-        # 创建底部状态栏
-        self.create_status_bar(main_layout)
-        
-        # 连接信号
-        self.browser.urlChanged.connect(self.update_url)
-        self.browser.loadFinished.connect(self.update_title)
-        
-        # 初始更新
-        self.update_url(self.browser.url())
-        self.update_data_list()
-        
-        # 显示Selenium状态
-        if not SELENIUM_AVAILABLE:
-            self.status_label.setText("⚠️ Selenium不可用，部分网站可能无法爬取")
-        
-        # 显示DOCX状态
-        if not DOCX_AVAILABLE:
-            self.status_label.setText("⚠️ DOCX导出功能不可用，请安装python-docx")
-    
-    def create_top_toolbar(self, parent_layout):
-        """创建顶部工具栏"""
-        toolbar_widget = QWidget()
-        toolbar_layout = QHBoxLayout(toolbar_widget)
-        toolbar_layout.setContentsMargins(0, 0, 0, 0)
-        toolbar_layout.setSpacing(8)
-        
-        # 导航按钮
-        self.back_btn = ModernButton("←")
-        self.back_btn.setFixedSize(40, 36)
-        self.back_btn.setToolTip("后退")
-        self.back_btn.clicked.connect(self.browser.back)
-        
-        self.forward_btn = ModernButton("→")
-        self.forward_btn.setFixedSize(40, 36)
-        self.forward_btn.setToolTip("前进")
-        self.forward_btn.clicked.connect(self.browser.forward)
-        
-        self.reload_btn = ModernButton("↻")
-        self.reload_btn.setFixedSize(40, 36)
-        self.reload_btn.setToolTip("刷新")
-        self.reload_btn.clicked.connect(self.browser.reload)
-        
-        # 地址栏
-        self.url_bar = QLineEdit()
-        self.url_bar.setPlaceholderText("输入网址并按下回车...")
-        self.url_bar.returnPressed.connect(self.navigate_to_url)
-        
-        # 爬虫控制按钮
-        self.check_btn = ModernButton("检查可爬取性")
-        self.check_btn.clicked.connect(self.check_crawlability)
-        self.check_btn.setToolTip("检查当前页面是否可以爬取")
-        
-        self.crawl_btn = ModernButton("爬取页面")
-        self.crawl_btn.clicked.connect(self.crawl_current_page)
-        self.crawl_btn.setToolTip("爬取当前页面内容")
-        self.crawl_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #27AE60;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: 500;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #219653;
-            }
-            QPushButton:pressed {
-                background-color: #1E874B;
-            }
-        """)
-        
-        # 添加到工具栏
-        toolbar_layout.addWidget(self.back_btn)
-        toolbar_layout.addWidget(self.forward_btn)
-        toolbar_layout.addWidget(self.reload_btn)
-        toolbar_layout.addWidget(self.url_bar, 1)
-        toolbar_layout.addWidget(self.check_btn)
-        toolbar_layout.addWidget(self.crawl_btn)
-        
-        parent_layout.addWidget(toolbar_widget)
-    
-    def create_main_content(self, parent_layout):
-        """创建主内容区域"""
-        # 创建水平分割器
-        splitter = QSplitter(Qt.Horizontal)
-        
-        # 左侧 - 浏览器
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        # 左侧：浏览器主体
         browser_container = QWidget()
         browser_layout = QVBoxLayout(browser_container)
         browser_layout.setContentsMargins(0, 0, 0, 0)
-        browser_layout.setSpacing(0)
-        
-        # 添加浏览器到左侧容器
-        browser_layout.addWidget(self.browser)
-        
-        # 右侧 - 数据面板
-        data_container = QWidget()
-        data_layout = QVBoxLayout(data_container)
-        data_layout.setContentsMargins(0, 0, 0, 0)
-        data_layout.setSpacing(12)
-        
-        # 创建选项卡
+        self.create_toolbar(browser_layout)
         self.tab_widget = QTabWidget()
+        self.tab_widget.setTabsClosable(True)
+        self.tab_widget.tabCloseRequested.connect(self.close_tab)
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
+        browser_layout.addWidget(self.tab_widget)
+        self.add_new_tab(QUrl("https://www.baidu.com"), "首页")
+
+        # 右侧：爬虫数据面板
+        self.data_panel = self.create_data_panel()
+
+        # 分割器
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(browser_container)
+        splitter.addWidget(self.data_panel)
+        splitter.setSizes([900, 500])
+        main_layout.addWidget(splitter)
+
+        # 状态栏
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_label = QLabel("准备就绪", objectName="status")
+        self.status_bar.addPermanentWidget(self.status_label)
+
+        # 创建菜单栏
+        self.create_menubar()
+
+    def create_menubar(self):
+        """创建菜单栏"""
+        menubar = self.menuBar()
+
+        # 文件菜单
+        file_menu = menubar.addMenu("文件")
         
-        # 数据列表选项卡
-        data_list_tab = QWidget()
-        data_list_layout = QVBoxLayout(data_list_tab)
-        data_list_layout.setContentsMargins(12, 12, 12, 12)
-        data_list_layout.setSpacing(12)
+        new_tab_action = QAction("新建标签页", self)
+        new_tab_action.setShortcut("Ctrl+T")
+        new_tab_action.triggered.connect(lambda: self.add_new_tab(QUrl("https://www.baidu.com")))
         
-        # 数据列表标题
-        data_list_label = QLabel("已爬取的数据")
-        data_list_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50;")
+        new_window_action = QAction("新建窗口", self)
+        new_window_action.setShortcut("Ctrl+N")
+        new_window_action.triggered.connect(self.new_window)
         
+        quit_action = QAction("退出", self)
+        quit_action.setShortcut("Ctrl+Q")
+        quit_action.triggered.connect(self.close)
+        
+        file_menu.addAction(new_tab_action)
+        file_menu.addAction(new_window_action)
+        file_menu.addSeparator()
+        file_menu.addAction(quit_action)
+
+        # 编辑菜单
+        edit_menu = menubar.addMenu("编辑")
+        
+        cut_action = QAction("剪切", self)
+        cut_action.setShortcut("Ctrl+X")
+        cut_action.triggered.connect(self.cut)
+        
+        copy_action = QAction("复制", self)
+        copy_action.setShortcut("Ctrl+C")
+        copy_action.triggered.connect(self.copy)
+        
+        paste_action = QAction("粘贴", self)
+        paste_action.setShortcut("Ctrl+V")
+        paste_action.triggered.connect(self.paste)
+        
+        edit_menu.addAction(cut_action)
+        edit_menu.addAction(copy_action)
+        edit_menu.addAction(paste_action)
+
+        # 查看菜单
+        view_menu = menubar.addMenu("查看")
+        
+        zoom_in_action = QAction("放大", self)
+        zoom_in_action.setShortcut("Ctrl++")
+        zoom_in_action.triggered.connect(self.zoom_in)
+        
+        zoom_out_action = QAction("缩小", self)
+        zoom_out_action.setShortcut("Ctrl+-")
+        zoom_out_action.triggered.connect(self.zoom_out)
+        
+        zoom_reset_action = QAction("重置缩放", self)
+        zoom_reset_action.setShortcut("Ctrl+0")
+        zoom_reset_action.triggered.connect(self.zoom_reset)
+        
+        view_menu.addAction(zoom_in_action)
+        view_menu.addAction(zoom_out_action)
+        view_menu.addAction(zoom_reset_action)
+
+        # 书签菜单
+        bookmarks_menu = menubar.addMenu("书签")
+        
+        add_bookmark_action = QAction("添加书签", self)
+        add_bookmark_action.setShortcut("Ctrl+D")
+        add_bookmark_action.triggered.connect(self.add_bookmark)
+        
+        bookmarks_manager_action = QAction("书签管理器", self)
+        bookmarks_manager_action.setShortcut("Ctrl+Shift+O")
+        bookmarks_manager_action.triggered.connect(self.bookmarks_manager.show)
+        
+        bookmarks_menu.addAction(add_bookmark_action)
+        bookmarks_menu.addAction(bookmarks_manager_action)
+
+        # 工具菜单
+        tools_menu = menubar.addMenu("工具")
+        
+        downloads_action = QAction("下载管理器", self)
+        downloads_action.setShortcut("Ctrl+J")
+        downloads_action.triggered.connect(self.download_manager.show)
+        
+        history_action = QAction("历史记录", self)
+        history_action.setShortcut("Ctrl+H")
+        history_action.triggered.connect(self.history_manager.show)
+        
+        settings_action = QAction("设置", self)
+        settings_action.setShortcut("Ctrl+,")
+        settings_action.triggered.connect(self.settings_dialog.exec_)
+        
+        tools_menu.addAction(downloads_action)
+        tools_menu.addAction(history_action)
+        tools_menu.addSeparator()
+        tools_menu.addAction(settings_action)
+
+        # 帮助菜单
+        help_menu = menubar.addMenu("帮助")
+        
+        about_action = QAction("关于", self)
+        about_action.triggered.connect(self.show_about)
+        
+        help_menu.addAction(about_action)
+
+    def create_toolbar(self, parent_layout):
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+
+        self.back_btn = QPushButton("⏪")
+        self.forward_btn = QPushButton("⏩")
+        self.reload_btn = QPushButton("🔄")
+        self.home_btn = QPushButton("🏠")
+        self.downloads_btn = QPushButton("📥")
+        self.history_btn = QPushButton("📚")
+        self.bookmarks_btn = QPushButton("🔖")
+        
+        self.url_bar = QLineEdit()
+        self.url_bar.setPlaceholderText("输入网址或关键词（自动百度搜索）")
+        
+        self.crawl_btn = QPushButton("🕷️ 抓取当前页")
+        new_tab_btn = QPushButton("+")
+
+        # 连接信号
+        self.back_btn.clicked.connect(self.on_back_clicked)
+        self.forward_btn.clicked.connect(self.on_forward_clicked)
+        self.reload_btn.clicked.connect(self.on_reload_clicked)
+        self.home_btn.clicked.connect(self.go_home)
+        self.downloads_btn.clicked.connect(self.download_manager.show)
+        self.history_btn.clicked.connect(self.history_manager.show)
+        self.bookmarks_btn.clicked.connect(self.bookmarks_manager.show)
+        self.url_bar.returnPressed.connect(self.on_go_or_search)
+        self.crawl_btn.clicked.connect(self.start_crawl)
+        new_tab_btn.clicked.connect(lambda: self.add_new_tab(QUrl("https://www.baidu.com")))
+
+        # 添加到工具栏
+        toolbar.addWidget(self.back_btn)
+        toolbar.addWidget(self.forward_btn)
+        toolbar.addWidget(self.reload_btn)
+        toolbar.addWidget(self.home_btn)
+        toolbar.addSeparator()
+        toolbar.addWidget(self.downloads_btn)
+        toolbar.addWidget(self.history_btn)
+        toolbar.addWidget(self.bookmarks_btn)
+        
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        toolbar.addWidget(spacer)
+        
+        toolbar.addWidget(self.url_bar)
+        toolbar.addWidget(self.crawl_btn)
+        toolbar.addWidget(new_tab_btn)
+        parent_layout.addWidget(toolbar)
+
+    def add_new_tab(self, url, title="新标签页"):
+        browser = QWebEngineView()
+        
+        # 创建自定义页面，并传递主窗口引用
+        page = CustomWebEnginePage(browser, self)
+        browser.setPage(page)
+        
+        # 设置更真实的用户代理
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        browser.page().profile().setHttpUserAgent(user_agent)
+        
+        # 启用所有必要的Web引擎功能
+        settings = browser.settings()
+        settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
+        settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        settings.setAttribute(QWebEngineSettings.ScrollAnimatorEnabled, True)
+        settings.setAttribute(QWebEngineSettings.AutoLoadImages, True)
+        settings.setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
+        settings.setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
+        settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
+        settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(QWebEngineSettings.AllowRunningInsecureContent, True)
+        settings.setAttribute(QWebEngineSettings.AllowWindowActivationFromJavaScript, True)
+        settings.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, True)
+        settings.setAttribute(QWebEngineSettings.PlaybackRequiresUserGesture, False)
+
+        browser.load(url)
+        browser.titleChanged.connect(lambda t: self.update_tab_title(browser, t))
+        browser.loadFinished.connect(lambda ok: self.on_load_finished(ok, browser))
+        browser.urlChanged.connect(lambda q: self.on_url_changed(browser, q))
+
+        index = self.tab_widget.addTab(browser, title)
+        self.tab_widget.setCurrentIndex(index)
+        return browser
+
+    def update_tab_title(self, browser, title):
+        index = self.tab_widget.indexOf(browser)
+        if index != -1:
+            truncated = title[:20] + "..." if len(title) > 20 else title
+            self.tab_widget.setTabText(index, truncated)
+
+    def on_load_finished(self, success, browser):
+        if success:
+            self.status_label.setText("页面加载完成")
+            # 添加到历史记录
+            self.history_manager.add_history(browser.title(), browser.url().toString())
+        else:
+            self.status_label.setText("加载失败")
+        self.update_navigation_buttons()
+
+    def on_url_changed(self, browser, url):
+        if browser == self.tab_widget.currentWidget():
+            self.url_bar.setText(url.toString())
+
+    def close_tab(self, index):
+        if self.tab_widget.count() > 1:
+            widget = self.tab_widget.widget(index)
+            widget.deleteLater()
+            self.tab_widget.removeTab(index)
+        else:
+            self.tab_widget.clear()
+            self.add_new_tab(QUrl("https://www.baidu.com"))
+
+    def on_tab_changed(self, index):
+        if index == -1: return
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            self.url_bar.setText(browser.url().toString())
+            self.update_navigation_buttons()
+
+    def on_back_clicked(self):
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView): browser.back()
+
+    def on_forward_clicked(self):
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView): browser.forward()
+
+    def on_reload_clicked(self):
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.reload()
+
+    def go_home(self):
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.load(QUrl("https://www.baidu.com"))
+
+    def on_go_or_search(self):
+        text = self.url_bar.text().strip()
+        if not text: return
+
+        if text.startswith(("http://", "https://")):
+            url = QUrl(text)
+        elif '.' in text:
+            url = QUrl("https://" + text)
+        else:
+            encoded = requests.utils.quote(text)
+            url = QUrl(f"https://www.baidu.com/s?wd={encoded}")
+
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView): 
+            browser.load(url)
+
+    def start_crawl(self):
+        browser = self.tab_widget.currentWidget()
+        if not isinstance(browser, QWebEngineView): return
+
+        current_url = browser.url().toString()
+
+        if not self.crawler.can_fetch(current_url):
+            reply = QMessageBox.question(
+                self, "风险提示",
+                f"⚠️ robots.txt 不允许爬取该网站。\n是否继续？",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No: return
+
+        self.status_label.setText("🔍 正在抓取页面...")
+        QTimer.singleShot(100, lambda: self._do_crawl_in_thread(current_url))
+
+    def _do_crawl_in_thread(self, url):
+        success, msg = self.crawler.crawl_single_page(url)
+        self.status_label.setText(f"{'✅' if success else '❌'} {msg}")
+        self.update_data_list()
+
+    def create_data_panel(self):
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        group = QGroupBox("爬取数据管理")
+        group_layout = QVBoxLayout()
+
         # 数据列表
         self.data_list = QListWidget()
-        self.data_list.itemClicked.connect(self.show_data_content)
-        self.data_list.setAlternatingRowColors(True)
-        
-        # 数据操作按钮
-        data_buttons_layout = QHBoxLayout()
-        self.save_btn = ModernButton("保存数据")
-        self.save_btn.clicked.connect(self.save_crawled_data)
-        
-        self.clear_btn = ModernButton("清空数据")
-        self.clear_btn.clicked.connect(self.clear_crawled_data)
-        
-        self.export_btn = ModernButton("导出训练数据")
-        self.export_btn.clicked.connect(self.export_training_data)
-        self.export_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #9B59B6;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #8E44AD;
-            }
-        """)
-        
-        self.export_docx_btn = ModernButton("导出DOCX")
-        self.export_docx_btn.clicked.connect(self.export_to_docx)
-        self.export_docx_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #E74C3C;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #C0392B;
-            }
-        """)
-        if not DOCX_AVAILABLE:
-            self.export_docx_btn.setEnabled(False)
-            self.export_docx_btn.setToolTip("DOCX导出功能不可用，请安装python-docx")
-        
-        data_buttons_layout.addWidget(self.save_btn)
-        data_buttons_layout.addWidget(self.clear_btn)
-        data_buttons_layout.addWidget(self.export_btn)
-        data_buttons_layout.addWidget(self.export_docx_btn)
-        data_buttons_layout.addStretch()
-        
-        # 添加到数据列表选项卡
-        data_list_layout.addWidget(data_list_label)
-        data_list_layout.addWidget(self.data_list, 1)
-        data_list_layout.addLayout(data_buttons_layout)
-        
-        # 数据预览选项卡
-        data_preview_tab = QWidget()
-        data_preview_layout = QVBoxLayout(data_preview_tab)
-        data_preview_layout.setContentsMargins(12, 12, 12, 12)
-        data_preview_layout.setSpacing(12)
-        
-        # 预览标题
-        preview_label = QLabel("数据预览")
-        preview_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50;")
-        
-        # 翻译工具栏
-        translate_toolbar = QHBoxLayout()
-        translate_label = QLabel("翻译:")
-        translate_label.setStyleSheet("font-weight: 600;")
-        
-        self.translate_en_btn = ModernButton("英译中")
-        self.translate_en_btn.clicked.connect(lambda: self.translate_content('zh-cn'))
-        
-        self.translate_zh_btn = ModernButton("中译英")
-        self.translate_zh_btn.clicked.connect(lambda: self.translate_content('en'))
-        
-        translate_toolbar.addWidget(translate_label)
-        translate_toolbar.addWidget(self.translate_en_btn)
-        translate_toolbar.addWidget(self.translate_zh_btn)
-        translate_toolbar.addStretch()
-        
-        # 数据内容显示
-        self.data_content = QTextEdit()
-        self.data_content.setReadOnly(True)
-        
-        # 添加到预览选项卡
-        data_preview_layout.addWidget(preview_label)
-        data_preview_layout.addLayout(translate_toolbar)
-        data_preview_layout.addWidget(self.data_content, 1)
-        
-        # 添加选项卡
-        self.tab_widget.addTab(data_list_tab, "📋 数据列表")
-        self.tab_widget.addTab(data_preview_tab, "👁️ 数据预览")
-        
-        # 添加到数据容器
-        data_layout.addWidget(self.tab_widget)
-        
-        # 添加到分割器
-        splitter.addWidget(browser_container)
-        splitter.addWidget(data_container)
-        splitter.setSizes([700, 500])
-        
-        parent_layout.addWidget(splitter, 1)
-    
-    def create_status_bar(self, parent_layout):
-        """创建底部状态栏"""
-        status_widget = QWidget()
-        status_layout = QHBoxLayout(status_widget)
-        status_layout.setContentsMargins(12, 8, 12, 8)
-        status_layout.setSpacing(8)
-        
-        # 状态标签
-        self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E8F4FD; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #2C3E50;
-                font-weight: 500;
-                border: 1px solid #BBDEFB;
-            }
-        """)
-        
-        # 数据统计
-        self.data_stats = QLabel("数据: 0 条")
-        self.data_stats.setStyleSheet("""
-            QLabel {
-                background-color: #E8F5E8; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #2C3E50;
-                font-weight: 500;
-                border: 1px solid #C8E6C9;
-            }
-        """)
-        
-        status_layout.addWidget(self.status_label, 1)
-        status_layout.addWidget(self.data_stats)
-        
-        parent_layout.addWidget(status_widget)
-    
-    def navigate_to_url(self):
-        """导航到地址栏中的URL"""
-        url = self.url_bar.text().strip()
-        if not url:
-            return
-            
-        if not url.startswith('http'):
-            url = 'https://' + url
-            
-        # 添加加载中状态
-        self.status_label.setText("🔄 加载中...")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #FFF3CD; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #856404;
-                font-weight: 500;
-                border: 1px solid #FFECB5;
-            }
-        """)
-        
-        self.browser.setUrl(QUrl(url))
-    
-    def update_url(self, q):
-        """更新地址栏显示"""
-        self.url_bar.setText(q.toString())
-    
-    def update_title(self):
-        """更新窗口标题"""
-        title = self.browser.page().title()
-        self.setWindowTitle(f"{title} - AI数据采集浏览器")
-        self.status_label.setText("✅ 页面加载完成")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E8F5E8; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #2C3E50;
-                font-weight: 500;
-                border: 1px solid #C8E6C9;
-            }
-        """)
-    
-    def check_crawlability(self):
-        """检查当前页面是否可以爬取"""
-        current_url = self.browser.url().toString()
-        if not current_url:
-            self.status_label.setText("❌ 无当前URL")
-            return
-        
-        can_crawl, message = self.crawler.can_crawl(current_url)
-        if can_crawl:
-            self.status_label.setText("✅ " + message)
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #E8F5E8; 
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: #2C3E50;
-                    font-weight: 500;
-                    border: 1px solid #C8E6C9;
-                }
-            """)
-        else:
-            self.status_label.setText("❌ " + message)
-            self.status_label.setStyleSheet("""
-                QLabel {
-                    background-color: #FFEBEE; 
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: #2C3E50;
-                    font-weight: 500;
-                    border: 1px solid #FFCDD2;
-                }
-            """)
-    
-    def crawl_current_page(self):
-        """爬取当前页面"""
-        if self.crawler.is_crawling:
-            self.status_label.setText("⏳ 正在爬取中，请等待...")
-            return
-        
-        current_url = self.browser.url().toString()
-        if not current_url:
-            self.status_label.setText("❌ 无当前URL")
-            return
-        
-        # 检查是否可以爬取
-        can_crawl, message = self.crawler.can_crawl(current_url)
-        if not can_crawl:
-            self.status_label.setText("❌ " + message)
-            return
-        
-        # 在后台线程中执行爬取
-        self.crawl_thread = CrawlerThread(self.crawler, current_url)
-        self.crawl_thread.start()
-        
-        self.status_label.setText("🔄 正在爬取页面...")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E3F2FD; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #2C3E50;
-                font-weight: 500;
-                border: 1px solid #BBDEFB;
-            }
-        """)
-        
-        # 禁用爬取按钮
-        self.crawl_btn.setEnabled(False)
-        
-        # 启动定时器检查爬取状态
-        self.check_timer = QTimer()
-        self.check_timer.timeout.connect(self.check_crawl_status)
-        self.check_timer.start(500)  # 每500毫秒检查一次
-    
-    def check_crawl_status(self):
-        """检查爬取状态"""
-        if not self.crawler.is_crawling and self.crawl_thread and not self.crawl_thread.is_alive():
-            # 爬取完成
-            self.check_timer.stop()
-            self.crawl_btn.setEnabled(True)
-            
-            # 更新数据列表
-            self.update_data_list()
-            
-            # 显示最新爬取的数据
-            if self.crawler.crawled_data:
-                latest_data = self.crawler.crawled_data[-1]
-                self.data_content.setText(latest_data['content'])
-                self.status_label.setText(f"✅ 爬取完成: {latest_data['title']}")
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        background-color: #E8F5E8; 
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        color: #2C3E50;
-                        font-weight: 500;
-                        border: 1px solid #C8E6C9;
-                    }
-                """)
-            else:
-                self.status_label.setText("⚠️ 爬取完成但未获取到数据")
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        background-color: #FFF3CD; 
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        color: #856404;
-                        font-weight: 500;
-                        border: 1px solid #FFECB5;
-                    }
-                """)
-    
+        self.data_list.itemClicked.connect(self.show_data_detail)
+
+        # 数据预览
+        self.data_preview = QTextEdit()
+        self.data_preview.setReadOnly(True)
+
+        # 操作按钮
+        btn_layout = QHBoxLayout()
+        save_btn = QPushButton("💾 保存数据")
+        clear_btn = QPushButton("🗑️ 清空")
+        export_txt = QPushButton("📤 导出训练集")
+        export_docx = QPushButton("📄 导出DOCX")
+        export_docx.setEnabled(DOCX_AVAILABLE)
+
+        save_btn.clicked.connect(self.save_all_data)
+        clear_btn.clicked.connect(self.clear_all_data)
+        export_txt.clicked.connect(self.export_training_data)
+        export_docx.clicked.connect(self.export_as_docx)
+
+        btn_layout.addWidget(save_btn)
+        btn_layout.addWidget(clear_btn)
+        btn_layout.addWidget(export_txt)
+        btn_layout.addWidget(export_docx)
+
+        group_layout.addWidget(QLabel("已抓取页面"))
+        group_layout.addWidget(self.data_list)
+        group_layout.addWidget(QLabel("内容预览"))
+        group_layout.addWidget(self.data_preview)
+        group_layout.addLayout(btn_layout)
+        group.setLayout(group_layout)
+        layout.addWidget(group)
+        return panel
+
     def update_data_list(self):
-        """更新数据列表"""
         self.data_list.clear()
-        for i, data in enumerate(self.crawler.crawled_data):
-            item = QListWidgetItem(f"{i+1}. {data['title']} ({data['length']} 字符)")
-            item.setData(Qt.UserRole, i)  # 存储索引
+        for i, d in enumerate(self.crawler.crawled_data):
+            item = QListWidgetItem(f"{i+1}. {d['title']} ({d['word_count']}字)")
+            item.setData(Qt.UserRole, i)
             self.data_list.addItem(item)
-        
-        # 更新数据统计
-        self.data_stats.setText(f"数据: {len(self.crawler.crawled_data)} 条")
-        
-        # 如果有数据，自动选择最后一项
-        if self.crawler.crawled_data:
-            self.data_list.setCurrentRow(len(self.crawler.crawled_data) - 1)
-            self.show_data_content(self.data_list.currentItem())
-    
-    def show_data_content(self, item):
-        """显示选中数据的内容"""
-        if not item:
-            return
-            
-        index = item.data(Qt.UserRole)
-        if index < len(self.crawler.crawled_data):
-            data = self.crawler.crawled_data[index]
-            self.data_content.setText(data['content'])
-    
-    def translate_content(self, dest_lang):
-        """翻译当前内容"""
-        text = self.data_content.toPlainText()
-        if not text.strip():
-            QMessageBox.warning(self, "警告", "没有内容可翻译")
-            return
-        
-        # 显示翻译中状态
-        original_text = text
-        self.data_content.setText("🔄 翻译中...")
-        self.data_content.repaint()
-        
-        # 在后台执行翻译
-        def do_translate():
-            try:
-                translated = self.crawler.translate_text(original_text, dest_lang)
-                return translated
-            except Exception as e:
-                return f"❌ 翻译失败: {str(e)}"
-        
-        # 使用QTimer模拟异步操作
-        def update_translation():
-            translated = do_translate()
-            self.data_content.setText(translated)
-        
-        QTimer.singleShot(100, update_translation)
-    
-    def save_crawled_data(self):
-        """保存爬取的数据"""
-        if not self.crawler.crawled_data:
-            QMessageBox.information(self, "提示", "没有数据可保存")
-            return
-        
-        try:
-            # 保存为JSON
-            json_path = os.path.join(self.crawler.output_dir, 'crawled_data.json')
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(self.crawler.crawled_data, f, ensure_ascii=False, indent=2)
-            
-            QMessageBox.information(self, "成功", f"数据已保存到 {json_path}")
-        except Exception as e:
-            QMessageBox.critical(self, "错误", f"保存数据失败: {str(e)}")
-    
-    def export_training_data(self):
-        """导出训练数据"""
-        if not self.crawler.crawled_data:
-            QMessageBox.information(self, "提示", "没有数据可导出")
-            return
-        
-        try:
-            # 保存为纯文本（用于训练AI）
-            text_path = os.path.join(self.crawler.output_dir, 'training_data.txt')
-            with open(text_path, 'w', encoding='utf-8') as f:
-                for item in self.crawler.crawled_data:
-                    f.write(f"URL: {item['url']}\n")
-                    f.write(f"标题: {item['title']}\n")
-                    f.write(f"内容: {item['content']}\n")
-                    f.write("\n" + "="*80 + "\n\n")
-            
-            QMessageBox.information(self, "成功", f"训练数据已导出到 {text_path}")
-        except Exception as e:
-            QMessageBox.critical(self, "错误", f"导出训练数据失败: {str(e)}")
-    
-    def export_to_docx(self):
-        """导出数据为DOCX文档"""
-        if not self.crawler.crawled_data:
-            QMessageBox.information(self, "提示", "没有数据可导出")
-            return
-        
-        # 选择保存路径
-        filepath, _ = QFileDialog.getSaveFileName(
-            self, "保存DOCX文档", 
-            os.path.join(self.crawler.output_dir, "crawled_data.docx"),
-            "Word文档 (*.docx)"
+
+    def show_data_detail(self, item):
+        idx = item.data(Qt.UserRole)
+        data = self.crawler.crawled_data[idx]
+        content = (
+            f"📌 标题: {data['title']}\n"
+            f"🔗 URL: {data['url']}\n"
+            f"📅 时间: {data['timestamp']}\n"
+            f"📝 字数: {data['word_count']}, 字符: {data['char_count']}\n"
+            f"🔗 内链:{data['internal_links']} 外链:{data['external_links']}\n\n"
+            f"{data['full_content']}"
         )
-        
-        if not filepath:
-            return
-        
-        # 显示导出中状态
-        self.status_label.setText("🔄 正在导出DOCX文档...")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                background-color: #E3F2FD; 
-                padding: 8px 12px;
-                border-radius: 6px;
-                color: #2C3E50;
-                font-weight: 500;
-                border: 1px solid #BBDEFB;
-            }
-        """)
-        
-        # 在后台执行导出
-        def do_export():
-            return self.crawler.export_to_docx(filepath)
-        
-        # 使用QTimer模拟异步操作
-        def update_export_status():
-            success, message = do_export()
-            if success:
-                self.status_label.setText("✅ " + message)
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        background-color: #E8F5E8; 
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        color: #2C3E50;
-                        font-weight: 500;
-                        border: 1px solid #C8E6C9;
-                    }
-                """)
-                QMessageBox.information(self, "成功", message)
-            else:
-                self.status_label.setText("❌ " + message)
-                self.status_label.setStyleSheet("""
-                    QLabel {
-                        background-color: #FFEBEE; 
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        color: #2C3E50;
-                        font-weight: 500;
-                        border: 1px solid #FFCDD2;
-                    }
-                """)
-                QMessageBox.critical(self, "错误", message)
-        
-        QTimer.singleShot(100, update_export_status)
-    
-    def clear_crawled_data(self):
-        """清空爬取的数据"""
-        if not self.crawler.crawled_data:
-            return
-        
-        reply = QMessageBox.question(self, "确认", "确定要清空所有爬取的数据吗？",
-                                   QMessageBox.Yes | QMessageBox.No)
-        
-        if reply == QMessageBox.Yes:
+        self.data_preview.setText(content)
+
+    def save_all_data(self):
+        path = os.path.join(self.crawler.output_dir, "crawled_data.json")
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(self.crawler.crawled_data, f, ensure_ascii=False, indent=2)
+            QMessageBox.information(self, "成功", f"数据已保存到：\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self, "失败", str(e))
+
+    def clear_all_data(self):
+        if QMessageBox.question(self, "确认", "清空所有爬取数据？") == QMessageBox.Yes:
             self.crawler.crawled_data.clear()
-            self.update_data_list()
-            self.data_content.clear()
-            self.status_label.setText("数据已清空")
+            self.data_list.clear()
+            self.data_preview.clear()
 
-def main():
-    """主函数"""
+    def export_training_data(self):
+        path = os.path.join(self.crawler.output_dir, "training_data.txt")
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                for d in self.crawler.crawled_data:
+                    f.write(f"URL: {d['url']}\n")
+                    f.write(f"标题: {d['title']}\n")
+                    f.write(f"内容:\n{d['full_content']}\n")
+                    f.write("\n" + "="*80 + "\n\n")
+            QMessageBox.information(self, "成功", f"训练数据已生成：\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self, "失败", str(e))
+
+    def export_as_docx(self):
+        path, _ = QFileDialog.getSaveFileName(self, "保存DOCX", "", "Word文件 (*.docx)")
+        if not path: return
+        success, msg = self.crawler.export_to_docx(path)
+        QMessageBox.information(self, "结果", msg)
+
+    def update_navigation_buttons(self):
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            self.back_btn.setEnabled(browser.history().canGoBack())
+            self.forward_btn.setEnabled(browser.history().canGoForward())
+
+    # 新增的浏览器功能
+    def new_window(self):
+        """新建浏览器窗口"""
+        new_browser = ModernBrowser()
+        new_browser.show()
+
+    def cut(self):
+        """剪切"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.triggerPageAction(QWebEnginePage.Cut)
+
+    def copy(self):
+        """复制"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.triggerPageAction(QWebEnginePage.Copy)
+
+    def paste(self):
+        """粘贴"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.triggerPageAction(QWebEnginePage.Paste)
+
+    def zoom_in(self):
+        """放大页面"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            current_zoom = browser.zoomFactor()
+            browser.setZoomFactor(min(current_zoom + 0.1, 3.0))
+
+    def zoom_out(self):
+        """缩小页面"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            current_zoom = browser.zoomFactor()
+            browser.setZoomFactor(max(current_zoom - 0.1, 0.25))
+
+    def zoom_reset(self):
+        """重置缩放"""
+        browser = self.tab_widget.currentWidget()
+        if isinstance(browser, QWebEngineView):
+            browser.setZoomFactor(1.0)
+
+    def add_bookmark(self):
+        """添加书签"""
+        self.bookmarks_manager.add_bookmark()
+
+    def show_about(self):
+        """显示关于对话框"""
+        about_text = """
+        <h2>道衍AI浏览器</h2>
+        <p><b>版本：</b>2.0 专业版</p>
+        <p><b>功能特性：</b></p>
+        <ul>
+            <li>智能网页爬虫和数据提取</li>
+            <li>完整的下载管理系统</li>
+            <li>浏览历史记录</li>
+            <li>书签管理</li>
+            <li>多标签页浏览</li>
+            <li>AI训练数据导出</li>
+            <li>合规robots.txt检查</li>
+        </ul>
+        <p><b>技术支持：</b>基于PyQt5和QWebEngine构建</p>
+        """
+        QMessageBox.about(self, "关于道衍AI浏览器", about_text)
+
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setApplicationName("AI数据采集浏览器")
-    app.setApplicationVersion("2.0")
-    
-    # 设置应用字体
-    font = QFont()
-    font.setFamily("Microsoft YaHei")
-    font.setPointSize(10)
-    app.setFont(font)
-    
-    window = BrowserWithCrawler()
-    window.show()
-    
-    sys.exit(app.exec_())
+    app.setFont(QFont("Microsoft YaHei", 10))
 
-if __name__ == '__main__':
-    main()
+    # 检查依赖提示
+    missing = []
+    for pkg, mod in [("requests", "requests"), ("bs4", "bs4")]:
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(pkg)
+    if missing:
+        QMessageBox.warning(None, "缺少依赖", f"请安装: pip install {' '.join(missing)}")
+
+    if not SELENIUM_AVAILABLE:
+        QMessageBox.information(None, "提示", "Selenium不可用 → 动态页面可能无法抓取")
+    if not DOCX_AVAILABLE:
+        QMessageBox.information(None, "提示", "DOCX导出功能不可用，请安装 python-docx")
+
+    window = ModernBrowser()
+    window.show()
+    sys.exit(app.exec_())
