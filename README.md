@@ -1,7 +1,7 @@
 # AI数据采集浏览器
 
 ![Python Version](https://img.shields.io/badge/Python-3.11-blue.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
 
 ## 📖 项目概述
@@ -226,6 +226,26 @@ URL: https://example2.com
 
 ---
 
+## 📄 许可证
+
+本项目采用 **GNU General Public License v3.0 (GPL-3.0)** 许可证。
+
+### GPL-3.0 许可证要点：
+- **自由使用**：任何人都可以免费使用本软件
+- **源代码可得**：必须提供源代码
+- **相同许可证**：基于本项目的衍生作品必须采用相同的GPL-3.0许可证
+- **版权声明**：必须保留原始的版权声明和许可证
+
+完整的许可证文本请查看项目根目录下的 [LICENSE](LICENSE) 文件。
+
+### 商业使用说明
+由于采用GPL-3.0许可证，商业使用是允许的，但必须：
+1. 公开任何基于本项目的修改版本的源代码
+2. 在衍生作品中明确标注原始版权信息
+3. 采用相同的GPL-3.0许可证
+
+---
+
 ## 🤝 贡献指南
 
 我们欢迎社区贡献！如果您想改进这个项目：
@@ -249,12 +269,6 @@ pip install -r requirements.txt
 
 ---
 
-## 📄 许可证
-
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
----
-
 ## 🙏 致谢
 
 ### 特别感谢
@@ -263,12 +277,12 @@ pip install -r requirements.txt
 - **开源社区**：感谢所有依赖库的维护者
 
 ### 使用的开源库
-- PyQt5 - 图形界面框架
-- Requests - HTTP请求库
-- BeautifulSoup4 - HTML解析库
-- Selenium - 浏览器自动化工具
-- python-docx - Word文档处理
-- googletrans - 翻译服务
+- PyQt5 - 图形界面框架 (GPL许可证)
+- Requests - HTTP请求库 (Apache 2.0许可证)
+- BeautifulSoup4 - HTML解析库 (MIT许可证)
+- Selenium - 浏览器自动化工具 (Apache 2.0许可证)
+- python-docx - Word文档处理 (MIT许可证)
+- googletrans - 翻译服务 (MIT许可证)
 
 ---
 
@@ -287,4 +301,7 @@ pip install -r requirements.txt
 
 **AI数据采集浏览器** - 让数据收集变得更简单、更智能！
 
+*概念提出：张悦-玄曦雪*  
+*代码实现：Deepseek AI*  
+*许可证：GPL-3.0*  
 *最后更新：2025年11月4日*
