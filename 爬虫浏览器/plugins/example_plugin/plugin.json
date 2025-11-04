@@ -1,0 +1,7 @@
+{
+    "name": "示例插件",
+    "version": "1.0.0",
+    "description": "这是一个示例插件，用于演示插件系统功能",
+    "author": "道衍AI浏览器",
+    "main": "main.py"
+}

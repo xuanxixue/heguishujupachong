@@ -1,0 +1,538 @@
+2025-11-05 01:51:06,938 - INFO - ====== WebDriver manager ======
+2025-11-05 01:51:11,836 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:51:12,762 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 01:51:13,704 - INFO - Driver downloading response is 200
+2025-11-05 01:51:19,151 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:51:22,584 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:51:26,236 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 01:51:29,188 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x003EA813+48355]
+	(No symbol) [0x0037C4B1]
+	(No symbol) [0x00285358]
+	(No symbol) [0x002A1A9E]
+	(No symbol) [0x002A0579]
+	(No symbol) [0x002D0C55]
+	(No symbol) [0x002D093C]
+	(No symbol) [0x002CA536]
+	(No symbol) [0x002A82DC]
+	(No symbol) [0x002A93DD]
+	GetHandleVerifier [0x0064AABD+2539405]
+	GetHandleVerifier [0x0068A78F+2800735]
+	GetHandleVerifier [0x0068456C+2775612]
+	GetHandleVerifier [0x004751E0+616112]
+	(No symbol) [0x00385F8C]
+	(No symbol) [0x00382328]
+	(No symbol) [0x0038240B]
+	(No symbol) [0x00374FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 01:55:05,335 - INFO - ====== WebDriver manager ======
+2025-11-05 01:55:10,245 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:55:10,619 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 01:55:11,053 - INFO - Driver downloading response is 200
+2025-11-05 01:55:15,329 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:55:18,250 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 01:55:21,079 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 01:55:23,938 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x007EA813+48355]
+	(No symbol) [0x0077C4B1]
+	(No symbol) [0x00685358]
+	(No symbol) [0x006A1A9E]
+	(No symbol) [0x006A0579]
+	(No symbol) [0x006D0C55]
+	(No symbol) [0x006D093C]
+	(No symbol) [0x006CA536]
+	(No symbol) [0x006A82DC]
+	(No symbol) [0x006A93DD]
+	GetHandleVerifier [0x00A4AABD+2539405]
+	GetHandleVerifier [0x00A8A78F+2800735]
+	GetHandleVerifier [0x00A8456C+2775612]
+	GetHandleVerifier [0x008751E0+616112]
+	(No symbol) [0x00785F8C]
+	(No symbol) [0x00782328]
+	(No symbol) [0x0078240B]
+	(No symbol) [0x00774FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:00:25,268 - INFO - ====== WebDriver manager ======
+2025-11-05 02:00:29,980 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:00:30,352 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:00:30,744 - INFO - Driver downloading response is 200
+2025-11-05 02:00:35,827 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:00:38,776 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:00:41,627 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:00:44,481 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0039A813+48355]
+	(No symbol) [0x0032C4B1]
+	(No symbol) [0x00235358]
+	(No symbol) [0x00251A9E]
+	(No symbol) [0x00250579]
+	(No symbol) [0x00280C55]
+	(No symbol) [0x0028093C]
+	(No symbol) [0x0027A536]
+	(No symbol) [0x002582DC]
+	(No symbol) [0x002593DD]
+	GetHandleVerifier [0x005FAABD+2539405]
+	GetHandleVerifier [0x0063A78F+2800735]
+	GetHandleVerifier [0x0063456C+2775612]
+	GetHandleVerifier [0x004251E0+616112]
+	(No symbol) [0x00335F8C]
+	(No symbol) [0x00332328]
+	(No symbol) [0x0033240B]
+	(No symbol) [0x00324FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:05:14,393 - INFO - ====== WebDriver manager ======
+2025-11-05 02:05:19,162 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:05:19,538 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:05:20,107 - INFO - Driver downloading response is 200
+2025-11-05 02:05:24,126 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:05:27,076 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:05:29,947 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:05:32,788 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x00E9A813+48355]
+	(No symbol) [0x00E2C4B1]
+	(No symbol) [0x00D35358]
+	(No symbol) [0x00D51A9E]
+	(No symbol) [0x00D50579]
+	(No symbol) [0x00D80C55]
+	(No symbol) [0x00D8093C]
+	(No symbol) [0x00D7A536]
+	(No symbol) [0x00D582DC]
+	(No symbol) [0x00D593DD]
+	GetHandleVerifier [0x010FAABD+2539405]
+	GetHandleVerifier [0x0113A78F+2800735]
+	GetHandleVerifier [0x0113456C+2775612]
+	GetHandleVerifier [0x00F251E0+616112]
+	(No symbol) [0x00E35F8C]
+	(No symbol) [0x00E32328]
+	(No symbol) [0x00E3240B]
+	(No symbol) [0x00E24FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:10:51,916 - INFO - ====== WebDriver manager ======
+2025-11-05 02:10:56,898 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:10:57,277 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:11:02,281 - WARNING - Selenium 初始化失败: Could not reach host. Are you offline?
+2025-11-05 02:12:37,513 - INFO - ====== WebDriver manager ======
+2025-11-05 02:12:42,273 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:12:42,652 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:12:43,039 - INFO - Driver downloading response is 200
+2025-11-05 02:12:47,274 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:12:50,202 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:12:53,025 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:12:55,899 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x00E0A813+48355]
+	(No symbol) [0x00D9C4B1]
+	(No symbol) [0x00CA5358]
+	(No symbol) [0x00CC1A9E]
+	(No symbol) [0x00CC0579]
+	(No symbol) [0x00CF0C55]
+	(No symbol) [0x00CF093C]
+	(No symbol) [0x00CEA536]
+	(No symbol) [0x00CC82DC]
+	(No symbol) [0x00CC93DD]
+	GetHandleVerifier [0x0106AABD+2539405]
+	GetHandleVerifier [0x010AA78F+2800735]
+	GetHandleVerifier [0x010A456C+2775612]
+	GetHandleVerifier [0x00E951E0+616112]
+	(No symbol) [0x00DA5F8C]
+	(No symbol) [0x00DA2328]
+	(No symbol) [0x00DA240B]
+	(No symbol) [0x00D94FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:16:43,870 - WARNING - 无法检查 robots.txt: name 'urllib' is not defined
+2025-11-05 02:17:00,751 - WARNING - 无法检查 robots.txt: name 'urllib' is not defined
+2025-11-05 02:19:57,261 - INFO - ====== WebDriver manager ======
+2025-11-05 02:20:01,990 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:20:02,396 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:20:02,776 - INFO - Driver downloading response is 200
+2025-11-05 02:20:07,602 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:20:10,502 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:20:13,279 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:20:16,112 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0053A813+48355]
+	(No symbol) [0x004CC4B1]
+	(No symbol) [0x003D5358]
+	(No symbol) [0x003F1A9E]
+	(No symbol) [0x003F0579]
+	(No symbol) [0x00420C55]
+	(No symbol) [0x0042093C]
+	(No symbol) [0x0041A536]
+	(No symbol) [0x003F82DC]
+	(No symbol) [0x003F93DD]
+	GetHandleVerifier [0x0079AABD+2539405]
+	GetHandleVerifier [0x007DA78F+2800735]
+	GetHandleVerifier [0x007D456C+2775612]
+	GetHandleVerifier [0x005C51E0+616112]
+	(No symbol) [0x004D5F8C]
+	(No symbol) [0x004D2328]
+	(No symbol) [0x004D240B]
+	(No symbol) [0x004C4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:21:07,471 - INFO - ====== WebDriver manager ======
+2025-11-05 02:21:12,266 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:21:12,651 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:21:13,042 - INFO - Driver downloading response is 200
+2025-11-05 02:21:17,331 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:21:20,188 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:21:23,017 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:21:25,843 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0051A813+48355]
+	(No symbol) [0x004AC4B1]
+	(No symbol) [0x003B5358]
+	(No symbol) [0x003D1A9E]
+	(No symbol) [0x003D0579]
+	(No symbol) [0x00400C55]
+	(No symbol) [0x0040093C]
+	(No symbol) [0x003FA536]
+	(No symbol) [0x003D82DC]
+	(No symbol) [0x003D93DD]
+	GetHandleVerifier [0x0077AABD+2539405]
+	GetHandleVerifier [0x007BA78F+2800735]
+	GetHandleVerifier [0x007B456C+2775612]
+	GetHandleVerifier [0x005A51E0+616112]
+	(No symbol) [0x004B5F8C]
+	(No symbol) [0x004B2328]
+	(No symbol) [0x004B240B]
+	(No symbol) [0x004A4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:24:06,321 - INFO - ====== WebDriver manager ======
+2025-11-05 02:24:11,117 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:24:11,508 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:24:11,899 - INFO - Driver downloading response is 200
+2025-11-05 02:24:15,867 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:24:18,812 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:24:21,642 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:24:24,498 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x00D7A813+48355]
+	(No symbol) [0x00D0C4B1]
+	(No symbol) [0x00C15358]
+	(No symbol) [0x00C31A9E]
+	(No symbol) [0x00C30579]
+	(No symbol) [0x00C60C55]
+	(No symbol) [0x00C6093C]
+	(No symbol) [0x00C5A536]
+	(No symbol) [0x00C382DC]
+	(No symbol) [0x00C393DD]
+	GetHandleVerifier [0x00FDAABD+2539405]
+	GetHandleVerifier [0x0101A78F+2800735]
+	GetHandleVerifier [0x0101456C+2775612]
+	GetHandleVerifier [0x00E051E0+616112]
+	(No symbol) [0x00D15F8C]
+	(No symbol) [0x00D12328]
+	(No symbol) [0x00D1240B]
+	(No symbol) [0x00D04FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:29:36,625 - INFO - ====== WebDriver manager ======
+2025-11-05 02:29:41,430 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:29:41,799 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:29:42,188 - INFO - Driver downloading response is 200
+2025-11-05 02:29:46,170 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:29:49,124 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:29:51,952 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:29:54,883 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0080A813+48355]
+	(No symbol) [0x0079C4B1]
+	(No symbol) [0x006A5358]
+	(No symbol) [0x006C1A9E]
+	(No symbol) [0x006C0579]
+	(No symbol) [0x006F0C55]
+	(No symbol) [0x006F093C]
+	(No symbol) [0x006EA536]
+	(No symbol) [0x006C82DC]
+	(No symbol) [0x006C93DD]
+	GetHandleVerifier [0x00A6AABD+2539405]
+	GetHandleVerifier [0x00AAA78F+2800735]
+	GetHandleVerifier [0x00AA456C+2775612]
+	GetHandleVerifier [0x008951E0+616112]
+	(No symbol) [0x007A5F8C]
+	(No symbol) [0x007A2328]
+	(No symbol) [0x007A240B]
+	(No symbol) [0x00794FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:33:54,990 - INFO - ====== WebDriver manager ======
+2025-11-05 02:33:59,840 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:34:00,775 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:34:01,695 - INFO - Driver downloading response is 200
+2025-11-05 02:34:06,668 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:34:10,125 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:34:13,601 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:34:16,445 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0089A813+48355]
+	(No symbol) [0x0082C4B1]
+	(No symbol) [0x00735358]
+	(No symbol) [0x00751A9E]
+	(No symbol) [0x00750579]
+	(No symbol) [0x00780C55]
+	(No symbol) [0x0078093C]
+	(No symbol) [0x0077A536]
+	(No symbol) [0x007582DC]
+	(No symbol) [0x007593DD]
+	GetHandleVerifier [0x00AFAABD+2539405]
+	GetHandleVerifier [0x00B3A78F+2800735]
+	GetHandleVerifier [0x00B3456C+2775612]
+	GetHandleVerifier [0x009251E0+616112]
+	(No symbol) [0x00835F8C]
+	(No symbol) [0x00832328]
+	(No symbol) [0x0083240B]
+	(No symbol) [0x00824FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:41:38,431 - INFO - ====== WebDriver manager ======
+2025-11-05 02:41:43,149 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:41:44,452 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:41:45,589 - INFO - Driver downloading response is 200
+2025-11-05 02:41:51,412 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:41:55,287 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:41:58,978 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:42:01,777 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x00CCA813+48355]
+	(No symbol) [0x00C5C4B1]
+	(No symbol) [0x00B65358]
+	(No symbol) [0x00B81A9E]
+	(No symbol) [0x00B80579]
+	(No symbol) [0x00BB0C55]
+	(No symbol) [0x00BB093C]
+	(No symbol) [0x00BAA536]
+	(No symbol) [0x00B882DC]
+	(No symbol) [0x00B893DD]
+	GetHandleVerifier [0x00F2AABD+2539405]
+	GetHandleVerifier [0x00F6A78F+2800735]
+	GetHandleVerifier [0x00F6456C+2775612]
+	GetHandleVerifier [0x00D551E0+616112]
+	(No symbol) [0x00C65F8C]
+	(No symbol) [0x00C62328]
+	(No symbol) [0x00C6240B]
+	(No symbol) [0x00C54FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 02:47:10,085 - INFO - ====== WebDriver manager ======
+2025-11-05 02:47:17,713 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:47:18,323 - WARNING - Selenium 初始化失败: Could not reach host. Are you offline?
+2025-11-05 02:56:04,594 - INFO - ====== WebDriver manager ======
+2025-11-05 02:56:09,456 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:56:10,831 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 02:56:11,988 - INFO - Driver downloading response is 200
+2025-11-05 02:56:17,623 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:56:21,233 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 02:56:24,775 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 02:56:27,655 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0082A813+48355]
+	(No symbol) [0x007BC4B1]
+	(No symbol) [0x006C5358]
+	(No symbol) [0x006E1A9E]
+	(No symbol) [0x006E0579]
+	(No symbol) [0x00710C55]
+	(No symbol) [0x0071093C]
+	(No symbol) [0x0070A536]
+	(No symbol) [0x006E82DC]
+	(No symbol) [0x006E93DD]
+	GetHandleVerifier [0x00A8AABD+2539405]
+	GetHandleVerifier [0x00ACA78F+2800735]
+	GetHandleVerifier [0x00AC456C+2775612]
+	GetHandleVerifier [0x008B51E0+616112]
+	(No symbol) [0x007C5F8C]
+	(No symbol) [0x007C2328]
+	(No symbol) [0x007C240B]
+	(No symbol) [0x007B4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 03:03:00,046 - INFO - ====== WebDriver manager ======
+2025-11-05 03:03:04,882 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:03:06,360 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:03:07,460 - INFO - Driver downloading response is 200
+2025-11-05 03:03:13,452 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:03:17,101 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:03:20,743 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 03:03:23,599 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0113A813+48355]
+	(No symbol) [0x010CC4B1]
+	(No symbol) [0x00FD5358]
+	(No symbol) [0x00FF1A9E]
+	(No symbol) [0x00FF0579]
+	(No symbol) [0x01020C55]
+	(No symbol) [0x0102093C]
+	(No symbol) [0x0101A536]
+	(No symbol) [0x00FF82DC]
+	(No symbol) [0x00FF93DD]
+	GetHandleVerifier [0x0139AABD+2539405]
+	GetHandleVerifier [0x013DA78F+2800735]
+	GetHandleVerifier [0x013D456C+2775612]
+	GetHandleVerifier [0x011C51E0+616112]
+	(No symbol) [0x010D5F8C]
+	(No symbol) [0x010D2328]
+	(No symbol) [0x010D240B]
+	(No symbol) [0x010C4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 03:07:26,057 - INFO - ====== WebDriver manager ======
+2025-11-05 03:07:30,964 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:07:32,141 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:07:33,300 - INFO - Driver downloading response is 200
+2025-11-05 03:07:40,157 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:07:44,177 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:07:48,206 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 03:07:51,054 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0106A813+48355]
+	(No symbol) [0x00FFC4B1]
+	(No symbol) [0x00F05358]
+	(No symbol) [0x00F21A9E]
+	(No symbol) [0x00F20579]
+	(No symbol) [0x00F50C55]
+	(No symbol) [0x00F5093C]
+	(No symbol) [0x00F4A536]
+	(No symbol) [0x00F282DC]
+	(No symbol) [0x00F293DD]
+	GetHandleVerifier [0x012CAABD+2539405]
+	GetHandleVerifier [0x0130A78F+2800735]
+	GetHandleVerifier [0x0130456C+2775612]
+	GetHandleVerifier [0x010F51E0+616112]
+	(No symbol) [0x01005F8C]
+	(No symbol) [0x01002328]
+	(No symbol) [0x0100240B]
+	(No symbol) [0x00FF4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 03:11:35,812 - INFO - ====== WebDriver manager ======
+2025-11-05 03:11:41,197 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:11:42,345 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:11:42,933 - WARNING - Selenium 初始化失败: Could not reach host. Are you offline?
+2025-11-05 03:19:34,285 - INFO - ====== WebDriver manager ======
+2025-11-05 03:19:39,066 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:19:40,243 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:19:41,464 - INFO - Driver downloading response is 200
+2025-11-05 03:19:47,231 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:19:50,790 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:19:54,471 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 03:19:57,339 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x0096A813+48355]
+	(No symbol) [0x008FC4B1]
+	(No symbol) [0x00805358]
+	(No symbol) [0x00821A9E]
+	(No symbol) [0x00820579]
+	(No symbol) [0x00850C55]
+	(No symbol) [0x0085093C]
+	(No symbol) [0x0084A536]
+	(No symbol) [0x008282DC]
+	(No symbol) [0x008293DD]
+	GetHandleVerifier [0x00BCAABD+2539405]
+	GetHandleVerifier [0x00C0A78F+2800735]
+	GetHandleVerifier [0x00C0456C+2775612]
+	GetHandleVerifier [0x009F51E0+616112]
+	(No symbol) [0x00905F8C]
+	(No symbol) [0x00902328]
+	(No symbol) [0x0090240B]
+	(No symbol) [0x008F4FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 03:28:53,955 - INFO - ====== WebDriver manager ======
+2025-11-05 03:28:58,860 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:28:59,769 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:29:01,122 - INFO - Driver downloading response is 200
+2025-11-05 03:29:07,866 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:29:11,535 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:29:15,407 - INFO - Driver has been saved in cache [C:\Users\XUNXI\.wdm\drivers\chromedriver\win64\114.0.5735.90]
+2025-11-05 03:29:18,288 - WARNING - Selenium 初始化失败: Message: unknown error: cannot find Chrome binary
+Stacktrace:
+Backtrace:
+	GetHandleVerifier [0x00EFA813+48355]
+	(No symbol) [0x00E8C4B1]
+	(No symbol) [0x00D95358]
+	(No symbol) [0x00DB1A9E]
+	(No symbol) [0x00DB0579]
+	(No symbol) [0x00DE0C55]
+	(No symbol) [0x00DE093C]
+	(No symbol) [0x00DDA536]
+	(No symbol) [0x00DB82DC]
+	(No symbol) [0x00DB93DD]
+	GetHandleVerifier [0x0115AABD+2539405]
+	GetHandleVerifier [0x0119A78F+2800735]
+	GetHandleVerifier [0x0119456C+2775612]
+	GetHandleVerifier [0x00F851E0+616112]
+	(No symbol) [0x00E95F8C]
+	(No symbol) [0x00E92328]
+	(No symbol) [0x00E9240B]
+	(No symbol) [0x00E84FF7]
+	BaseThreadInitThunk [0x76005D49+25]
+	RtlInitializeExceptionChain [0x7717D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7717D661+561]
+
+2025-11-05 03:35:52,334 - INFO - ====== WebDriver manager ======
+2025-11-05 03:35:58,262 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:35:59,303 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:36:00,717 - INFO - Driver downloading response is 200
+2025-11-05 03:36:08,821 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:36:13,983 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:36:35,629 - WARNING - Selenium 初始化失败: Could not reach host. Are you offline?
+2025-11-05 03:47:11,165 - INFO - ====== WebDriver manager ======
+2025-11-05 03:47:15,994 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:47:17,696 - INFO - About to download new driver from https://chromedriver.storage.googleapis.com/114.0.5735.90/chromedriver_win32.zip
+2025-11-05 03:47:19,009 - INFO - Driver downloading response is 200
+2025-11-05 03:47:25,359 - INFO - Get LATEST chromedriver version for google-chrome
+2025-11-05 03:47:25,997 - WARNING - Selenium 初始化失败: Could not reach host. Are you offline?

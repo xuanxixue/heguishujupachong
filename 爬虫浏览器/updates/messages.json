@@ -1,0 +1,26 @@
+[
+  {
+    "id": "b6e9d594-7fa7-4889-9d9c-d550dfd75669",
+    "type": "announcement",
+    "title": "欢迎",
+    "content": "欢迎",
+    "version": "1.0",
+    "timestamp": "2025-11-05T03:29:33.123251"
+  },
+  {
+    "id": "13b25293-fc37-415e-b97f-f4afbc998074",
+    "type": "announcement",
+    "title": "欢迎",
+    "content": "欢迎",
+    "version": "1.0",
+    "timestamp": "2025-11-05T03:48:22.308320"
+  },
+  {
+    "id": "020bd082-4a6f-44a9-918f-71e5581bbfb6",
+    "type": "announcement",
+    "title": "欢迎使用",
+    "content": "欢迎使用",
+    "version": "1.0",
+    "timestamp": "2025-11-05T03:48:45.485040"
+  }
+]

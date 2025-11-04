@@ -1,0 +1,10 @@
+{
+  "download_path": "C:/Users/XUNXI/Downloads",
+  "ask_before_download": true,
+  "clear_on_exit": false,
+  "block_images": false,
+  "javascript_enabled": true,
+  "ai_api_url": "https://api.moonshot.cn/v1",
+  "ai_api_key": "sk-1Dcjb6bq8wBs5ZiME5uMxGMKpTEDNTvdxVmjdqAus4KP5xLW",
+  "ai_model": "moonshot-v1-128k"
+}
